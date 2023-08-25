@@ -1,7 +1,71 @@
+import { useState, useEffect } from 'react'
 import { Container } from "../../components/container";
+import { Link } from 'react-router-dom'
+
+import {
+    collection,
+    query,
+    getDocs,
+    orderBy
+} from 'firebase/firestore'
+import { db } from '../../services/firebaseConnection'
+
+interface CarsProps {
+    id: string;
+    name: string;
+    year: string;
+    uid: string;
+    price: string | number;
+    city: string;
+    km: string;
+    images: CarImageProps[];
+}
+
+interface CarImageProps {
+    name: string;
+    uid: string;
+    url: string;
+}
 
 export function Home() {
+    const [cars, setCars] = useState<CarsProps[]>([])
+    const [loadImages, setLoadImages] = useState<string[]>([])
 
+    useEffect(() => {
+
+        function loadCars() {
+            const carsRef = collection(db, 'cars')
+            const queryRef = query(carsRef, orderBy("created", "desc"))
+
+            getDocs(queryRef)
+                .then((snapshot) => {
+                    const listcars = [] as CarsProps[];
+
+                    snapshot.forEach(doc => {
+                        listcars.push({
+                            id: doc.id,
+                            name: doc.data().name,
+                            year: doc.data().year,
+                            km: doc.data().km,
+                            city: doc.data().city,
+                            price: doc.data().price,
+                            images: doc.data().images,
+                            uid: doc.data().uid
+                        })
+                    })
+
+                    setCars(listcars);
+
+                })
+        }
+
+        loadCars();
+
+    }, [])
+
+    function handleImageLoad(id: string){
+        setLoadImages((prevImageLoaded) => [...prevImageLoaded, id ])
+    }
 
     return (
         <Container>
@@ -21,29 +85,43 @@ export function Home() {
             </h1>
 
             <main className=" grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <section className=" w-full bg-white rounded-lg">
-                    <img
-                        className=" w-full rounded-lg mb-2 max-h-72 hover:scale-105 transition-all "
-                        src="https://image.webmotors.com.br/_fotos/anunciousados/gigante/2023/202308/20230823/jeep-compass-2.0-16v-diesel-longitude-4x4-automatico-wmimagem11544359045.jpg?s=fill&w=1920&h=1440&q=75"
-                        alt="Carro" />
-                    <p className=" font-bold mt-1 mb-2 px-2">JEEP COMPASS</p>
 
-                    <div className=" flex flex-col px-2">
-                        <span className=" text-zinc-700 mb-6">Ano 2017/2017 | 63.818 km</span>
-                        <strong className=" text-black font-medium text-xl">R$ 119.990 </strong>
-                    </div>
 
-                    <div className=" w-full h-px bg-slate-200 my-2"></div>
+                {cars.map( car => (
+               <Link key={car.id} to={`/car/${car.id}`}>
+                    <section className=" w-full bg-white rounded-lg">
+                        <div 
+                        className=' w-full h-72 rounded-lg bg-slate-200'
+                        style={{ display: loadImages.includes(car.id) ? "none" : "block"}}
+                        >
+                        </div>
+                        <img
+                            className=" w-full rounded-lg mb-2 max-h-72 hover:scale-105 transition-all "
+                            src={car.images[0].url}
+                            alt="Carro"
+                            onLoad={() => handleImageLoad(car.id)} 
+                            style={{ display: loadImages.includes(car.id) ? "block" : "none"}}
+                            />
+                        <p className=" font-bold mt-1 mb-2 px-2">{car.name}</p>
 
-                    <div className=" px-2 pb-2">
-                        <span className=" text-black">
-                            Santos - SP
-                        </span>
-                    </div>
+                        <div className=" flex flex-col px-2">
+                            <span className=" text-zinc-700 mb-6"> Ano: {car.year} |Km: {car.km}</span>
+                            <strong className=" text-black font-medium text-xl">R$: {car.price}</strong>
+                        </div>
 
-                </section>
+                        <div className=" w-full h-px bg-slate-200 my-2"></div>
 
-                
+                        <div className=" px-2 pb-2">
+                            <span className=" text-black">
+                               {car.city}
+                            </span>
+                        </div>
+
+                    </section>
+               </Link>
+                ))}
+
+
 
 
             </main>
