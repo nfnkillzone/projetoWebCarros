@@ -18,6 +18,7 @@ import {
     deleteObject
 } from 'firebase/storage'
 import { addDoc, collection } from 'firebase/firestore'
+import toast from "react-hot-toast";
 
 const schema = z.object({
     name: z.string().nonempty("O campo nome é obrigatório"),
@@ -85,6 +86,7 @@ export function New() {
                     }
 
                     setCarImages((images) => [...images, imageItem])
+                    toast.success("Imagem cadastrada")
 
 
                 })
@@ -96,7 +98,7 @@ export function New() {
     function onSubmit(data: FormData) {
 
         if (carImages.length === 0) {
-            alert("Envia alguma imagem desse carro")
+            toast.error("Envie no mínimo uma imagem")
             return;
         }
 
@@ -109,7 +111,7 @@ export function New() {
         })
 
         addDoc(collection(db, "cars"), {
-            name: data.name,
+            name: data.name.toUpperCase(),
             model: data.model,
             whatsapp: data.whatsapp,
             city: data.city,
@@ -126,6 +128,7 @@ export function New() {
                 reset();
                 setCarImages([]);
                 console.log("Cadastrado com sucesso")
+                toast.success("Cadastro concluído")
             })
             .catch((error) => {
                 console.log(error)

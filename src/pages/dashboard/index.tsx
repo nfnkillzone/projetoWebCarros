@@ -4,12 +4,13 @@ import { DashboardHeader } from '../../components/panelheader/index'
 
 import { FiTrash2 } from 'react-icons/fi'
 
-import { collection, getDocs, where, query } from 'firebase/firestore'
-import { db } from '../../services/firebaseConnection'
+import { collection, getDocs, where, query, doc, deleteDoc } from 'firebase/firestore'
+import { db, storage } from '../../services/firebaseConnection'
+import { ref, deleteObject } from 'firebase/storage'
 import { AuthContext } from '../../context/AuthContext'
 
-interface CarProps{
-    id:string;
+interface CarProps {
+    id: string;
     name: string;
     year: string;
     price: string | number;
@@ -19,7 +20,7 @@ interface CarProps{
     uid: string;
 }
 
-interface ImageCarProps{
+interface ImageCarProps {
     name: string;
     uid: string;
     url: string;
@@ -32,7 +33,7 @@ export function Dashboard() {
     useEffect(() => {
 
         function loadCars() {
-            if(!user?.uid){
+            if (!user?.uid) {
                 return;
             }
 
@@ -65,48 +66,69 @@ export function Dashboard() {
 
     }, [user])
 
+    async function handleDeleteCar(car: CarProps) {
+        const itemCar = car;
 
+        const docRef = doc(db, "cars", itemCar.id)
+        await deleteDoc(docRef);
+
+        itemCar.images.map(async (image) => {
+            const imagePath = `images/${image.uid}/${image.name}`
+            const imageRef = ref(storage, imagePath)
+            try {
+                await deleteObject(imageRef)
+                setCars(cars.filter(car => car.id !== itemCar.id))
+            } catch (err) {
+                console.log("Erro ao excluir imagem")
+            }
+
+        })
+    }
 
     return (
         <Container>
             <DashboardHeader />
             <main className=" grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 ">
 
-                <section className=" w-full bg-white rounded-lg relative">
+                {cars.map(car => (
+                    <section
+                        key={car.id}
+                        className=" w-full bg-white rounded-lg relative">
 
-                    <button
-                        onClick={() => { }}
-                        className=" absolute bg-white w-14 h-14 rounded-full flex items-center justify-center right-2 top-2 drop-shadow">
-                        <FiTrash2 size={26} color="#000" />
-                    </button>
-                    <img
-                        className=" w-full rounded-lg mb-2 max-h-70"
-                        src="https://firebasestorage.googleapis.com/v0/b/webcarros-6fc29.appspot.com/o/images%2FN6MoXGmAOTRNe1mOGw0n9OcKJRC3%2F3edb1f12-4802-49ac-af65-88ce7e8e8594?alt=media&token=eb7b486c-e3c2-4917-9377-9da2f9ea0d4e"
-                    />
-                    <p className=" font-bold mt-1 px-2 mb-2">
-                        BMW
-                    </p>
+                        <button
+                            onClick={ () => handleDeleteCar(car) }
+                            className=" absolute bg-white w-14 h-14 rounded-full flex items-center justify-center right-2 top-2 drop-shadow">
+                            <FiTrash2 size={26} color="#000" />
+                        </button>
+                        <img
+                            className=" w-full rounded-lg mb-2 max-h-70"
+                            src={car.images[0].url}
+                        />
+                        <p className=" font-bold mt-1 px-2 mb-2">
+                            {car.name}
+                        </p>
 
-                    <div className=" flex flex-col px-2">
-                        <span className=" text-zinc-700">
-                            Ano 2016/2017 | 120.000 KM
-                        </span>
-                        <strong className=" text-black font-bold mt-4">
-                            R$ 150.000
-                        </strong>
-                    </div>
+                        <div className=" flex flex-col px-2">
+                            <span className=" text-zinc-700">
+                                Ano {car.year} | {car.km} KM
+                            </span>
+                            <strong className=" text-black font-bold mt-4">
+                                R$ {car.price}
+                            </strong>
+                        </div>
 
-                    <div className=" w-full h-px bg-slate-200 my-2"></div>
-                    <div className=" px-2 pb-2">
-                        <span className=" text-black">
-                            Lins - SP
-                        </span>
-                    </div>
-
-
+                        <div className=" w-full h-px bg-slate-200 my-2"></div>
+                        <div className=" px-2 pb-2">
+                            <span className=" text-black">
+                                {car.city}
+                            </span>
+                        </div>
 
 
-                </section>
+
+
+                    </section>
+                ))}
 
             </main>
 
